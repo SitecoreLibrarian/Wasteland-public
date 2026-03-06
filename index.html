@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WASTELAND: ZERO HOUR</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@300;400;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #0a0a08;
+  --bg2:         #111109;
+  --bg3:         #1a1a14;
+  --panel:       #14140f;
+  --border:      #2a2a1e;
+  --border2:     #3a3a28;
+  --amber:       #d4820a;
+  --amber-bright:#f0a020;
+  --amber-dim:   #7a4a06;
+  --amber-glow:  rgba(212,130,10,0.15);
+  --green:       #2a6e2a;
+  --green-bright:#4caf50;
+  --red:         #8b1a1a;
+  --red-bright:  #e53935;
+  --blue:        #1a3a6e;
+  --blue-bright: #42a5f5;
+  --text:        #c8c0a0;
+  --text-dim:    #7a7060;
+  --text-bright: #e8e0c0;
+  --hp-color:    #4caf50;
+  --en-color:    #42a5f5;
+  --poison-color:#9c27b0;
+  --scan-line: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCANLINE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--scan-line);
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.4;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ══════════════════════════════════════════════
+   LOADING / BOOT SCREEN
+══════════════════════════════════════════════ */
+#screen-boot {
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+.boot-container {
+  width: min(600px, 95vw);
+  border: 1px solid var(--amber-dim);
+  padding: 40px;
+  background: var(--panel);
+  position: relative;
+}
+.boot-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(212,130,10,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.boot-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: clamp(28px, 6vw, 52px);
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  text-shadow: 0 0 30px rgba(212,130,10,0.5);
+  margin-bottom: 4px;
+  text-align: center;
+}
+.boot-subtitle {
+  font-size: 11px;
+  color: var(--amber-dim);
+  letter-spacing: 6px;
+  text-align: center;
+  margin-bottom: 32px;
+  text-transform: uppercase;
+}
+.boot-log {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 2;
+  min-height: 120px;
+  margin-bottom: 24px;
+  border-left: 2px solid var(--amber-dim);
+  padding-left: 12px;
+}
+.boot-log .ok { color: var(--green-bright); }
+.boot-log .err { color: var(--red-bright); }
+.boot-log .cursor { animation: blink 1s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.boot-btn {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 1px solid var(--amber);
+  color: var(--amber-bright);
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: none;
+}
+.boot-btn:hover { background: var(--amber-glow); text-shadow: 0 0 10px var(--amber); }
+
+/* ══════════════════════════════════════════════
+   CHARACTER CREATION
+══════════════════════════════════════════════ */
+#screen-create {
+  background: var(--bg);
+  padding: 20px;
+  align-items: center;
+}
+.create-wrap {
+  width: min(720px, 100%);
+}
+.create-header {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 6px;
+  color: var(--amber-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.create-step-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(20px, 4vw, 32px);
+  font-weight: 700;
+  color: var(--amber);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border2);
+  padding-bottom: 12px;
+}
+.create-section { margin-bottom: 20px; }
+
+/* Name input */
+.name-input-wrap { position: relative; }
+.name-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-bottom: 2px solid var(--amber-dim);
+  color: var(--text-bright);
+  font-family: 'Oswald', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.name-input:focus { border-bottom-color: var(--amber); }
+.name-input::placeholder { color: var(--text-dim); }
+
+/* Background cards */
+.bg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.bg-card {
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.bg-card:hover { border-color: var(--amber-dim); background: var(--bg3); }
+.bg-card.selected { border-color: var(--amber); background: var(--amber-glow); }
+.bg-card-icon { font-size: 24px; margin-bottom: 6px; }
+.bg-card-name { font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600; color: var(--amber); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+.bg-card-desc { font-family: 'Special Elite', serif; font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+.bg-card-flavor { font-size: 10px; color: var(--amber-dim); font-style: italic; margin-top: 6px; }
+.bg-card-bonuses { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+.bg-bonus-tag { font-size: 9px; padding: 2px 6px; border: 1px solid var(--amber-dim); color: var(--amber-dim); letter-spacing: 1px; }
+
+/* Stats */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.stat-row {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.stat-label { font-family: 'Oswald', sans-serif; font-size: 11px; letter-spacing: 2px; color: var(--amber-dim); }
+.stat-full-name { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+.stat-controls { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.stat-btn {
+  width: 24px; height: 24px;
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--amber); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.stat-btn:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-glow); }
+.stat-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+.stat-val { font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 600; color: var(--amber-bright); min-width: 24px; text-align: center; }
+.points-left { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; }
+.points-left span { color: var(--amber-bright); }
+
+/* Abilities select */
+.ability-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.ability-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 0.5;
+}
+.ability-card.available { opacity: 1; }
+.ability-card.selected { border-color: var(--amber); background: var(--amber-glow); opacity: 1; }
+.ability-card:hover.available { border-color: var(--amber-dim); background: var(--bg3); }
+.ability-icon { font-size: 20px; margin-bottom: 4px; }
+.ability-name { font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 600; color: var(--amber); letter-spacing: 1px; text-transform: uppercase; }
+.ability-cost { font-size: 9px; color: var(--blue-bright); letter-spacing: 1px; margin-top: 2px; }
+.ability-desc { font-size: 10px; color: var(--text-dim); line-height: 1.5; margin-top: 4px; }
+.ability-selected-count { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 8px; }
+.ability-selected-count span { color: var(--amber); }
+
+.create-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.create-btn {
+  padding: 12px 28px;
+  background: transparent;
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: 1;
+}
+.create-btn:hover { border-color: var(--amber); background: var(--amber-glow); }
+.create-btn.primary { border-color: var(--amber); color: var(--amber-bright); }
+.create-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Step indicator */
+.step-indicator { display: flex; gap: 8px; margin-bottom: 20px; }
+.step-dot { width: 8px; height: 8px; background: var(--border2); border-radius: 0; transition: all 0.3s; }
+.step-dot.active { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.step-dot.done { background: var(--amber-dim); }
+
+/* Gear display */
+.gear-preview {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 16px;
+}
+.gear-item { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.gear-item:last-child { border-bottom: none; }
+.gear-item-icon { font-size: 20px; min-width: 28px; }
+.gear-item-info {}
+.gear-item-name { font-family: 'Oswald', sans-serif; font-size: 12px; color: var(--amber); letter-spacing: 1px; }
+.gear-item-desc { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+/* ══════════════════════════════════════════════
+   MAIN GAME UI
+══════════════════════════════════════════════ */
+#screen-game {
+  background: var(--bg);
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  height: 100vh;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 8px;
+  gap: 6px;
+}
+
+/* Zone display */
+.zone-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 6px 12px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+.zone-name { font-family: 'Oswald', sans-serif; font-size: 12px; color: var(--amber); letter-spacing: 3px; text-transform: uppercase; }
+.zone-stats { display: flex; gap: 16px; }
+
+/* Battle area */
+.battle-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  overflow: hidden;
+}
+
+/* Enemy panel */
+.enemy-panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.enemy-panel-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--amber-dim);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+#enemy-container { display: flex; flex-direction: column; gap: 4px; }
+.enemy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg3);
+}
+.enemy-row:hover:not(.dead) { border-color: var(--amber-dim); }
+.enemy-row.targeted { border-color: var(--amber); background: var(--amber-glow); }
+.enemy-row.dead { opacity: 0.2; cursor: default; filter: grayscale(1); }
+.enemy-emoji { font-size: 20px; min-width: 28px; text-align: center; }
+.enemy-info { flex: 1; min-width: 0; }
+.enemy-name-row { display: flex; justify-content: space-between; align-items: center; }
+.enemy-name { font-family: 'Oswald', sans-serif; font-size: 11px; letter-spacing: 1px; color: var(--text-bright); text-transform: uppercase; }
+.enemy-hp-text { font-size: 9px; color: var(--text-dim); }
+.enemy-hp-bar { height: 3px; background: var(--border); margin-top: 3px; }
+.enemy-hp-fill { height: 100%; background: var(--red-bright); transition: width 0.3s; }
+.enemy-status { font-size: 9px; color: var(--text-dim); margin-top: 2px; display: flex; gap: 4px; }
+.status-badge { padding: 1px 4px; font-size: 8px; letter-spacing: 1px; }
+.status-badge.stunned { background: rgba(255,193,7,0.2); color: #ffc107; }
+.status-badge.poisoned { background: rgba(156,39,176,0.2); color: #ce93d8; }
+.status-badge.bleeding { background: rgba(229,57,53,0.2); color: var(--red-bright); }
+.enemy-target-arrow { font-size: 10px; color: var(--amber); min-width: 10px; }
+
+/* Party panel */
+.party-panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.party-panel-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--amber-dim);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.party-member-row {
+  padding: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.party-member-row:last-child { margin-bottom: 0; }
+.party-member-row.active { border-color: var(--amber); background: var(--amber-glow); }
+.party-member-row.dead { opacity: 0.3; cursor: default; }
+.party-member-row.acted { border-color: var(--green); }
+.party-member-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.party-member-name { font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: 1px; color: var(--amber-bright); text-transform: uppercase; }
+.party-member-class { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; }
+.party-member-tag { font-size: 8px; letter-spacing: 1px; padding: 1px 6px; }
+.party-member-tag.acting { background: rgba(212,130,10,0.2); color: var(--amber); }
+.party-member-tag.done { background: rgba(76,175,80,0.2); color: var(--green-bright); }
+.party-member-tag.fallen { background: rgba(229,57,53,0.2); color: var(--red-bright); }
+.member-bars { display: flex; flex-direction: column; gap: 3px; }
+.member-bar-row { display: flex; align-items: center; gap: 6px; }
+.member-bar-label { font-size: 8px; color: var(--text-dim); letter-spacing: 1px; min-width: 20px; }
+.member-bar { flex: 1; height: 4px; background: var(--border); border-radius: 0; overflow: hidden; }
+.member-bar-fill { height: 100%; transition: width 0.4s; border-radius: 0; }
+.member-bar-fill.hp { background: var(--hp-color); }
+.member-bar-fill.en { background: var(--en-color); }
+.member-bar-val { font-size: 8px; color: var(--text-dim); min-width: 32px; text-align: right; }
+
+/* Actions panel */
+.actions-panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.actions-row { display: flex; gap: 6px; }
+.action-btn {
+  flex: 1;
+  padding: 10px 8px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.action-btn:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); background: var(--amber-glow); }
+.action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.action-btn.attack { border-color: var(--red); color: var(--red-bright); }
+.action-btn.attack:hover:not(:disabled) { background: rgba(139,26,26,0.2); }
+.action-btn.flee { border-color: var(--border2); }
+.items-display { display: flex; gap: 6px; flex-wrap: wrap; }
+.item-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border2);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.item-chip:hover { border-color: var(--amber-dim); color: var(--text); }
+
+/* Turn banner */
+.turn-banner {
+  text-align: center;
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  padding: 5px;
+  border: 1px solid var(--border);
+}
+.turn-banner.player-turn { color: var(--amber); border-color: var(--amber-dim); background: rgba(212,130,10,0.05); }
+.turn-banner.enemy-turn { color: var(--red-bright); border-color: var(--red); background: rgba(139,26,26,0.1); }
+
+/* Message log */
+.message-log {
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  padding: 8px 10px;
+  height: 110px;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.8;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.log-line { }
+.log-line.attack { color: var(--red-bright); }
+.log-line.enemy  { color: #ff8a65; }
+.log-line.ability { color: var(--blue-bright); }
+.log-line.heal   { color: var(--green-bright); }
+.log-line.loot   { color: var(--amber-bright); }
+.log-line.system { color: var(--text-dim); font-style: italic; }
+.log-line.death  { color: var(--red-bright); opacity: 0.7; }
+.log-line.warn   { color: #ffc107; }
+
+/* ══════════════════════════════════════════════
+   OVERLAYS
+══════════════════════════════════════════════ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  z-index: 500;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.overlay.open { display: flex; }
+
+/* Ability menu overlay */
+#overlay-abilities .ability-menu {
+  width: min(600px, 100%);
+  border: 1px solid var(--amber-dim);
+  background: var(--panel);
+  padding: 20px;
+}
+.overlay-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 5px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ability-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; margin-bottom: 14px; }
+.ability-menu-btn {
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.ability-menu-btn:hover:not(:disabled) { border-color: var(--amber-dim); background: var(--amber-glow); }
+.ability-menu-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.amenu-icon { font-size: 18px; }
+.amenu-name { font-family: 'Oswald', sans-serif; font-size: 11px; color: var(--amber); letter-spacing: 1px; text-transform: uppercase; margin: 4px 0 2px; }
+.amenu-cost { font-size: 9px; color: var(--blue-bright); letter-spacing: 1px; }
+.amenu-desc { font-size: 9px; color: var(--text-dim); line-height: 1.5; margin-top: 3px; }
+.overlay-close {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.overlay-close:hover { border-color: var(--red); color: var(--red-bright); }
+
+/* Heal target sub-menu */
+#heal-target-list { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.heal-target-btn {
+  padding: 8px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.heal-target-btn:hover:not(:disabled) { border-color: var(--green-bright); color: var(--green-bright); }
+.heal-target-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Victory / Death overlays */
+.big-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.96);
+  z-index: 600;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.big-overlay.open { display: flex; }
+.big-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: clamp(32px, 8vw, 64px);
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  text-shadow: 0 0 40px currentColor;
+  margin-bottom: 8px;
+}
+.big-title.victory { color: var(--amber); }
+.big-title.defeat  { color: var(--red-bright); }
+.big-sub {
+  font-family: 'Special Elite', serif;
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
+  max-width: 440px;
+  line-height: 1.8;
+  margin-bottom: 20px;
+  font-style: italic;
+}
+
+/* Victory party cards */
+.victory-party-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; max-width: 560px; width: 100%; }
+.victory-member {
+  border: 1px solid var(--border2);
+  background: var(--panel);
+  padding: 10px 14px;
+  min-width: 110px;
+  flex: 1;
+}
+.victory-member.fallen { border-color: var(--red); opacity: 0.5; }
+.v-name { font-family: 'Oswald', sans-serif; font-size: 11px; color: var(--amber); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.v-bar-row { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+.v-bar-label { font-size: 8px; color: var(--text-dim); min-width: 18px; letter-spacing: 1px; }
+.v-bar { flex: 1; height: 4px; background: var(--border); }
+.v-bar-fill { height: 100%; }
+.v-bar-fill.hp { background: var(--hp-color); }
+.v-bar-fill.en { background: var(--en-color); }
+.v-bar-val { font-size: 8px; color: var(--text-dim); min-width: 30px; text-align: right; }
+.victory-gains {
+  display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
+  font-family: 'Oswald', sans-serif; font-size: 11px; letter-spacing: 2px;
+  color: var(--text-dim); border-top: 1px solid var(--border);
+  padding-top: 14px; margin-bottom: 20px;
+}
+.victory-gains span { color: var(--amber-bright); }
+
+.big-btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.big-btn {
+  padding: 14px 28px;
+  background: transparent;
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.big-btn:hover { border-color: var(--amber); background: var(--amber-glow); }
+.big-btn.danger { border-color: var(--red); color: var(--red-bright); }
+.big-btn.danger:hover { background: rgba(139,26,26,0.2); }
+
+/* Camp overlay */
+#overlay-camp {
+  background: rgba(0,0,0,0.97);
+}
+.camp-panel {
+  width: min(480px, 100%);
+  border: 1px solid var(--amber-dim);
+  background: var(--panel);
+  padding: 20px;
+}
+.camp-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 5px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.camp-sub { font-family: 'Special Elite', serif; font-size: 12px; color: var(--text-dim); font-style: italic; margin-bottom: 16px; letter-spacing: 1px; }
+.camp-actions-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.camp-action-btn {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+}
+.camp-action-btn:hover:not(:disabled) { border-color: var(--amber-dim); background: var(--amber-glow); }
+.camp-action-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.camp-action-btn.danger { border-color: var(--red); }
+.camp-action-btn.danger:hover { background: rgba(139,26,26,0.15); }
+.camp-icon { font-size: 22px; min-width: 28px; }
+.camp-label { font-family: 'Oswald', sans-serif; font-size: 12px; color: var(--amber); letter-spacing: 2px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+.camp-desc { font-size: 10px; color: var(--text-dim); font-style: italic; }
+.camp-result {
+  min-height: 56px;
+  font-size: 11px;
+  line-height: 1.9;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+/* Event overlay */
+#overlay-event .event-panel {
+  width: min(480px, 100%);
+  border: 1px solid var(--border2);
+  background: var(--panel);
+  padding: 24px;
+  text-align: center;
+}
+.event-icon { font-size: 56px; margin-bottom: 12px; filter: drop-shadow(0 0 20px rgba(212,130,10,0.4)); }
+.event-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(18px, 4vw, 28px);
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.event-desc { font-family: 'Special Elite', serif; font-size: 13px; color: var(--text-dim); line-height: 1.8; margin-bottom: 14px; font-style: italic; }
+.event-effects { font-size: 11px; line-height: 2; color: var(--text-dim); margin-bottom: 16px; }
+.event-btn {
+  padding: 12px 32px;
+  background: transparent;
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.event-btn:hover { border-color: var(--amber); background: var(--amber-glow); }
+
+/* Animations */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+@keyframes flashRed {
+  0%,100% { filter: none; }
+  50% { filter: brightness(0.5) sepia(1) saturate(5); }
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.shake { animation: shake 0.3s ease; }
+.flash-red { animation: flashRed 0.3s ease; }
+.pulse { animation: pulse 1.5s ease infinite; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+</style>
+</head>
+<body>
+
+<!-- ══ BOOT SCREEN ══ -->
+<div class="screen active" id="screen-boot">
+  <div class="boot-container">
+    <div class="boot-title">WASTELAND</div>
+    <div class="boot-subtitle">Zero Hour</div>
+    <div class="boot-log" id="boot-log"></div>
+    <button class="boot-btn" id="boot-start-btn" onclick="showCharCreate()">[ INITIALIZE SURVIVOR ]</button>
+  </div>
+</div>
+
+<!-- ══ CHARACTER CREATION ══ -->
+<div class="screen" id="screen-create">
+  <div class="create-wrap" id="create-wrap">
+    <div style="padding:16px 0 8px;">
+      <div class="create-header">SURVIVOR REGISTRATION</div>
+      <div class="step-indicator" id="step-indicator"></div>
+    </div>
+    <div id="create-content"></div>
+  </div>
+</div>
+
+<!-- ══ GAME ══ -->
+<div class="screen" id="screen-game">
+  <div class="game-layout">
+    <!-- Zone bar -->
+    <div class="zone-bar">
+      <div class="zone-name" id="zone-name">THE OUTSKIRTS</div>
+      <div class="zone-stats">
+        <span>KILLS: <span id="stat-kills" style="color:var(--amber)">0</span></span>
+        <span>XP: <span id="stat-xp" style="color:var(--amber)">0</span></span>
+        <span>CAPS: <span id="stat-caps" style="color:var(--amber)">0</span></span>
+      </div>
+    </div>
+
+    <!-- Battle area -->
+    <div class="battle-area">
+      <!-- Enemies -->
+      <div class="enemy-panel">
+        <div class="enemy-panel-title">◈ HOSTILES</div>
+        <div id="enemy-container"></div>
+      </div>
+      <!-- Party -->
+      <div class="party-panel">
+        <div class="party-panel-title">◈ SQUAD</div>
+        <div id="party-container"></div>
+      </div>
+    </div>
+
+    <!-- Turn banner + actions -->
+    <div>
+      <div class="turn-banner player-turn" id="turn-banner">◈ YOUR TURN ◈</div>
+      <div class="actions-panel" style="margin-top:6px;">
+        <div class="actions-row">
+          <button class="action-btn attack" id="btn-attack" onclick="playerAction('attack')">⚔ ATTACK</button>
+          <button class="action-btn" id="btn-ability" onclick="openAbilityMenu()">◈ ABILITY</button>
+          <button class="action-btn" id="btn-item" onclick="useItem()">🎒 ITEM</button>
+          <button class="action-btn flee" id="btn-flee" onclick="playerAction('flee')">↩ FLEE</button>
+        </div>
+        <div class="items-display" id="items-display"></div>
+      </div>
+    </div>
+
+    <!-- Message log -->
+    <div class="message-log" id="message-log"></div>
+  </div>
+</div>
+
+<!-- ══ ABILITY MENU OVERLAY ══ -->
+<div class="overlay" id="overlay-abilities">
+  <div class="ability-menu">
+    <div class="overlay-title">◈ ABILITIES</div>
+    <div class="ability-menu-grid" id="ability-menu-grid"></div>
+    <div id="heal-target-wrap" style="display:none">
+      <div style="font-size:10px;color:var(--amber-dim);letter-spacing:2px;margin-bottom:6px;">SELECT TARGET:</div>
+      <div id="heal-target-list"></div>
+    </div>
+    <button class="overlay-close" onclick="closeAbilityMenu()">✕ CANCEL</button>
+  </div>
+</div>
+
+<!-- ══ EVENT OVERLAY ══ -->
+<div class="overlay" id="overlay-event">
+  <div class="event-panel">
+    <div class="event-icon" id="event-icon"></div>
+    <div class="event-title" id="event-title"></div>
+    <div class="event-desc" id="event-desc"></div>
+    <div class="event-effects" id="event-effects"></div>
+    <button class="event-btn" onclick="dismissEvent()">CONTINUE ▶</button>
+  </div>
+</div>
+
+<!-- ══ VICTORY OVERLAY ══ -->
+<div class="big-overlay" id="overlay-victory">
+  <div class="big-title victory">ZONE CLEAR</div>
+  <div class="big-sub" id="victory-sub"></div>
+  <div class="victory-party-row" id="victory-party"></div>
+  <div class="victory-gains" id="victory-gains"></div>
+  <div class="big-btn-row">
+    <button class="big-btn" onclick="nextEncounter()">ADVANCE ▶</button>
+    <button class="big-btn" onclick="openCamp()">🔥 MAKE CAMP</button>
+  </div>
+</div>
+
+<!-- ══ DEATH OVERLAY ══ -->
+<div class="big-overlay" id="overlay-death">
+  <div class="big-title defeat">SQUAD WIPED</div>
+  <div class="big-sub">The wasteland takes no prisoners. Your story ends here — unmarked, unmourned, dust in the wind.</div>
+  <div class="victory-gains" id="death-stats"></div>
+  <div class="big-btn-row">
+    <button class="big-btn danger" onclick="restartGame()">TRY AGAIN</button>
+  </div>
+</div>
+
+<!-- ══ CAMP OVERLAY ══ -->
+<div class="overlay" id="overlay-camp">
+  <div class="camp-panel">
+    <div class="camp-title">🔥 CAMP</div>
+    <div class="camp-sub">The squad sets up for the night...</div>
+    <div class="camp-actions-list">
+      <button class="camp-action-btn" id="camp-btn-rest" onclick="doCamp('rest')">
+        <span class="camp-icon">😴</span>
+        <span><span class="camp-label">REST</span><span class="camp-desc">Sleep and recover HP and Energy.</span></span>
+      </button>
+      <button class="camp-action-btn" id="camp-btn-search" onclick="doCamp('search')">
+        <span class="camp-icon">🔍</span>
+        <span><span class="camp-label">SEARCH</span><span class="camp-desc">Scour the area for salvage and supplies.</span></span>
+      </button>
+      <button class="camp-action-btn" id="camp-btn-research" onclick="doCamp('research')">
+        <span class="camp-icon">📡</span>
+        <span><span class="camp-label">INTEL</span><span class="camp-desc">Review tactical data. Gain XP.</span></span>
+      </button>
+      <button class="camp-action-btn" id="camp-btn-craft" onclick="doCamp('craft')">
+        <span class="camp-icon">⚒</span>
+        <span><span class="camp-label">CRAFT</span><span class="camp-desc">Synthesize stims or power cells from caps.</span></span>
+      </button>
+      <button class="camp-action-btn danger" onclick="closeCamp()">
+        <span class="camp-icon">⚔</span>
+        <span><span class="camp-label">MOVE OUT</span><span class="camp-desc">Break camp and push deeper.</span></span>
+      </button>
+    </div>
+    <div class="camp-result" id="camp-result"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA LOADING
+// ═══════════════════════════════════════════════════
+let DATA = { monsters: [], abilities: {}, items: {}, backgrounds: [], zones: [] };
+
+async function loadData() {
+  const files = ['monsters','abilities','items','backgrounds','zones'];
+  const bootLog = document.getElementById('boot-log');
+  const lines = [];
+
+  function addLine(html) {
+    lines.push(html);
+    bootLog.innerHTML = lines.join('<br>') + '<br><span class="cursor">_</span>';
+  }
+
+  addLine('WASTELAND OS v2.7 — INITIALIZING...');
+  await sleep(300);
+
+  for (const file of files) {
+    addLine(`Loading <span style="color:var(--amber)">${file}.json</span>...`);
+    await sleep(180 + Math.random() * 120);
+    try {
+      const res = await fetch(`data/${file}.json`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      DATA[file] = await res.json();
+      addLine(`<span class="ok">✓</span> ${file}.json — ${Array.isArray(DATA[file]) ? DATA[file].length + ' records' : Object.keys(DATA[file]).length + ' entries'}`);
+    } catch(e) {
+      addLine(`<span class="err">✗</span> ${file}.json — LOAD FAILED (${e.message})`);
+      // Use fallback empty data — game can still run
+    }
+    await sleep(60);
+  }
+
+  await sleep(400);
+  addLine('<span class="ok">✓</span> ALL SYSTEMS NOMINAL');
+  await sleep(300);
+  addLine('Awaiting survivor registration...');
+
+  document.getElementById('boot-start-btn').style.display = 'block';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ═══════════════════════════════════════════════════
+//  CHARACTER CREATION
+// ═══════════════════════════════════════════════════
+const STATS = [
+  { id: 'STR', name: 'Strength',     desc: 'Melee damage and carry weight' },
+  { id: 'AGI', name: 'Agility',      desc: 'Accuracy, dodge, and crit chance' },
+  { id: 'INT', name: 'Intelligence', desc: 'Ability power and energy pool' },
+  { id: 'END', name: 'Endurance',    desc: 'Max HP and damage resistance' },
+  { id: 'LCK', name: 'Luck',         desc: 'Critical hits and loot finds' },
+];
+const TOTAL_POINTS = 15;
+const STAT_MIN = 1;
+const STAT_MAX = 8;
+
+let cc = {
+  step: 0,
+  name: '',
+  background: null,
+  stats: { STR: 3, AGI: 3, INT: 3, END: 3, LCK: 3 },
+  selectedAbilities: [],
+};
+
+const STEPS = ['name', 'background', 'stats', 'abilities', 'gear'];
+
+function showCharCreate() {
+  showScreen('screen-create');
+  renderCreateStep();
+}
+
+function renderCreateStep() {
+  const stepInd = document.getElementById('step-indicator');
+  stepInd.innerHTML = STEPS.map((_, i) =>
+    `<div class="step-dot ${i < cc.step ? 'done' : i === cc.step ? 'active' : ''}"></div>`
+  ).join('');
+
+  const content = document.getElementById('create-content');
+  const step = STEPS[cc.step];
+
+  if (step === 'name') {
+    content.innerHTML = `
+      <div class="create-step-title">NAME YOUR SURVIVOR</div>
+      <div class="create-section">
+        <input class="name-input" id="cc-name" maxlength="24" placeholder="Enter designation..." value="${cc.name}" oninput="cc.name=this.value.trim()">
+      </div>
+      <div class="create-nav">
+        <button class="create-btn primary" onclick="ccNext()" id="cc-next-name">NEXT ▶</button>
+      </div>`;
+    document.getElementById('cc-name').focus();
+
+  } else if (step === 'background') {
+    content.innerHTML = `
+      <div class="create-step-title">CHOOSE BACKGROUND</div>
+      <div class="bg-grid">
+        ${DATA.backgrounds.map(bg => `
+          <div class="bg-card ${cc.background?.id === bg.id ? 'selected' : ''}" onclick="selectBg('${bg.id}')">
+            <div class="bg-card-icon">${bg.icon}</div>
+            <div class="bg-card-name">${bg.name}</div>
+            <div class="bg-card-desc">${bg.description}</div>
+            <div class="bg-card-flavor">${bg.flavor}</div>
+            <div class="bg-card-bonuses">
+              ${Object.entries(bg.statBonuses).map(([s,v]) => `<span class="bg-bonus-tag">+${v} ${s}</span>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="create-nav">
+        <button class="create-btn" onclick="ccBack()">◀ BACK</button>
+        <button class="create-btn primary" onclick="ccNext()" id="cc-next-bg">NEXT ▶</button>
+      </div>`;
+
+  } else if (step === 'stats') {
+    const used = Object.values(cc.stats).reduce((a,b) => a+b, 0);
+    const left = TOTAL_POINTS - used;
+    content.innerHTML = `
+      <div class="create-step-title">ALLOCATE STATS</div>
+      <div class="points-left" style="margin-bottom:12px;">Points remaining: <span>${left}</span></div>
+      <div class="stats-grid">
+        ${STATS.map(s => {
+          const val = cc.stats[s.id];
+          const bonus = cc.background?.statBonuses[s.id] || 0;
+          return `<div class="stat-row">
+            <div class="stat-label">${s.id}</div>
+            <div class="stat-full-name">${s.name}</div>
+            <div class="stat-full-name" style="color:var(--text-dim)">${s.desc}</div>
+            <div class="stat-controls">
+              <button class="stat-btn" onclick="adjustStat('${s.id}',-1)" ${val <= STAT_MIN ? 'disabled' : ''}>−</button>
+              <span class="stat-val">${val}</span>
+              <button class="stat-btn" onclick="adjustStat('${s.id}',1)" ${val >= STAT_MAX || left <= 0 ? 'disabled' : ''}>+</button>
+            </div>
+            ${bonus > 0 ? `<div style="font-size:9px;color:var(--amber-dim);margin-top:4px;">+${bonus} from background</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="create-nav">
+        <button class="create-btn" onclick="ccBack()">◀ BACK</button>
+        <button class="create-btn primary" onclick="ccNext()">NEXT ▶</button>
+      </div>`;
+
+  } else if (step === 'abilities') {
+    const abilityData = DATA.abilities?.player || {};
+    const bgAbilities = cc.background?.startingAbilities || [];
+    // All abilities available, background ones pre-selected
+    if (cc.selectedAbilities.length === 0 && bgAbilities.length) {
+      cc.selectedAbilities = [...bgAbilities];
+    }
+    const MAX_ABILITIES = 3;
+
+    content.innerHTML = `
+      <div class="create-step-title">SELECT ABILITIES</div>
+      <div class="ability-selected-count">Selected: <span>${cc.selectedAbilities.length}</span> / ${MAX_ABILITIES} &nbsp;(background abilities pre-selected)</div>
+      <div class="ability-grid">
+        ${Object.values(abilityData).map(ab => {
+          const isSelected = cc.selectedAbilities.includes(ab.id);
+          const isFromBg = bgAbilities.includes(ab.id);
+          const canAdd = cc.selectedAbilities.length < MAX_ABILITIES || isSelected;
+          return `<div class="ability-card ${isSelected ? 'selected' : ''} ${canAdd ? 'available' : ''}"
+            onclick="toggleAbility('${ab.id}', ${isFromBg})" style="${isFromBg ? 'border-color:var(--amber-dim);' : ''}">
+            <div class="ability-icon">${ab.icon}</div>
+            <div class="ability-name">${ab.name} ${isFromBg ? '⭐' : ''}</div>
+            <div class="ability-cost">⚡ ${ab.cost} EN</div>
+            <div class="ability-desc">${ab.description}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="create-nav">
+        <button class="create-btn" onclick="ccBack()">◀ BACK</button>
+        <button class="create-btn primary" onclick="ccNext()">NEXT ▶</button>
+      </div>`;
+
+  } else if (step === 'gear') {
+    const gear = cc.background?.startingGear;
+    const weaponData = DATA.items?.weapons?.[gear?.weapon];
+    const armorData  = DATA.items?.armor?.[gear?.armor];
+    const cons = gear?.consumables || {};
+
+    content.innerHTML = `
+      <div class="create-step-title">STARTING LOADOUT</div>
+      <div class="create-section">
+        <div style="font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-bottom:10px;">Loadout assigned by background. Your starting kit:</div>
+        <div class="gear-preview">
+          ${weaponData ? `<div class="gear-item">
+            <span class="gear-item-icon">${weaponData.icon}</span>
+            <div class="gear-item-info">
+              <div class="gear-item-name">${weaponData.name} <span style="color:var(--text-dim);font-size:10px;">[WEAPON +${weaponData.atkBonus} ATK]</span></div>
+              <div class="gear-item-desc">${weaponData.description}</div>
+            </div>
+          </div>` : ''}
+          ${armorData ? `<div class="gear-item">
+            <span class="gear-item-icon">${armorData.icon}</span>
+            <div class="gear-item-info">
+              <div class="gear-item-name">${armorData.name} <span style="color:var(--text-dim);font-size:10px;">[ARMOR +${armorData.armorBonus}]</span></div>
+              <div class="gear-item-desc">${armorData.description}</div>
+            </div>
+          </div>` : ''}
+          ${Object.entries(cons).map(([k,v]) => {
+            const item = DATA.items?.consumables?.[k];
+            if (!item) return '';
+            return `<div class="gear-item">
+              <span class="gear-item-icon">${item.icon}</span>
+              <div class="gear-item-info">
+                <div class="gear-item-name">${item.name} ×${v}</div>
+                <div class="gear-item-desc">${item.description}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:10px;color:var(--amber-dim);letter-spacing:1px;padding:10px;border:1px solid var(--border);">
+        ◈ PASSIVE: ${cc.background?.passiveDescription || '—'}
+      </div>
+      <div class="create-nav">
+        <button class="create-btn" onclick="ccBack()">◀ BACK</button>
+        <button class="create-btn primary" onclick="startGame()">▶ ENTER THE WASTELAND</button>
+      </div>`;
+  }
+}
+
+function selectBg(id) {
+  cc.background = DATA.backgrounds.find(b => b.id === id);
+  cc.selectedAbilities = [];
+  renderCreateStep();
+}
+
+function adjustStat(stat, delta) {
+  const used = Object.values(cc.stats).reduce((a,b) => a+b, 0);
+  const left = TOTAL_POINTS - used;
+  if (delta > 0 && (left <= 0 || cc.stats[stat] >= STAT_MAX)) return;
+  if (delta < 0 && cc.stats[stat] <= STAT_MIN) return;
+  cc.stats[stat] += delta;
+  renderCreateStep();
+}
+
+function toggleAbility(id, isFromBg) {
+  if (isFromBg) return;
+  const MAX = 3;
+  if (cc.selectedAbilities.includes(id)) {
+    cc.selectedAbilities = cc.selectedAbilities.filter(a => a !== id);
+  } else {
+    if (cc.selectedAbilities.length >= MAX) return;
+    cc.selectedAbilities.push(id);
+  }
+  renderCreateStep();
+}
+
+function ccNext() {
+  const step = STEPS[cc.step];
+  if (step === 'name' && !cc.name) { alert('Enter a name.'); return; }
+  if (step === 'background' && !cc.background) { alert('Choose a background.'); return; }
+  if (cc.step < STEPS.length - 1) { cc.step++; renderCreateStep(); }
+}
+function ccBack() {
+  if (cc.step > 0) { cc.step--; renderCreateStep(); }
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════
+let state = {
+  player: null,
+  enemies: [],
+  targetIdx: 0,
+  zone: 1,
+  kills: 0,
+  xp: 0,
+  caps: 0,
+  items: {},
+  turn: 'player',
+  busy: false,
+  pendingAbility: null,
+  battleXp: 0,
+  battleCaps: 0,
+  battleKills: 0,
+  defBuff: false,
+  adrenBuff: false,
+  suppressBuff: false,
+};
+
+function startGame() {
+  const bg = cc.background;
+  const stats = cc.stats;
+  const bonuses = bg.statBonuses;
+
+  // Derive HP and Energy from stats
+  const finalStats = {};
+  STATS.forEach(s => finalStats[s.id] = stats[s.id] + (bonuses[s.id] || 0));
+
+  const maxHp = 40 + finalStats.END * 8;
+  const maxEn = 20 + finalStats.INT * 6;
+  const baseAtk = 8 + finalStats.STR * 2;
+  const baseArmor = (bg.id === 'mutant' ? 4 : 0);
+  const critChance = 0.10 + finalStats.AGI * 0.02 + finalStats.LCK * 0.01;
+
+  // Gear bonuses
+  const gear = bg.startingGear;
+  const weapon = DATA.items?.weapons?.[gear?.weapon] || {};
+  const armor = DATA.items?.armor?.[gear?.armor] || {};
+
+  state.player = {
+    name: cc.name,
+    background: bg.name,
+    backgroundId: bg.id,
+    icon: bg.icon,
+    stats: finalStats,
+    hp: maxHp, maxHp,
+    energy: maxEn, maxEn,
+    atk: baseAtk + (weapon.atkBonus || 0),
+    armor: baseArmor + (armor.armorBonus || 0),
+    crit: critChance + (weapon.critBonus || 0),
+    abilities: cc.selectedAbilities,
+    level: 1,
+    passive: bg.passiveDescription,
+    passiveId: bg.id,
+    weapon,
+    armorGear: armor,
+    poisonTurns: 0,
+    poisonDmg: 0,
+    bleedTurns: 0,
+    bleedDmg: 0,
+  };
+
+  // Build items from starting gear
+  state.items = { stim: 0, super_stim: 0, power_cell: 0, revival_shot: 0, rad_away: 0 };
+  if (gear.consumables) {
+    Object.entries(gear.consumables).forEach(([k, v]) => {
+      if (state.items[k] !== undefined) state.items[k] += v;
+      else state.items[k] = v;
+    });
+  }
+
+  state.zone = 1;
+  state.kills = 0;
+  state.xp = 0;
+  state.caps = 0;
+
+  showScreen('screen-game');
+  spawnEnemies();
+  renderAll();
+  log(`◈ ${state.player.icon} ${state.player.name} enters the wasteland.`, 'system');
+  log(`Background: ${state.player.background}`, 'system');
+  log(`— Your turn —`, 'system');
+}
+
+// ═══════════════════════════════════════════════════
+//  SPAWN ENEMIES
+// ═══════════════════════════════════════════════════
+function spawnEnemies() {
+  const pool = DATA.monsters.filter(m => m.zone <= state.zone && !m.boss);
+  const bosses = DATA.monsters.filter(m => m.boss && m.zone === state.zone);
+
+  // Boss check
+  if (state.kills > 0 && state.kills % 5 === 0 && bosses.length) {
+    const t = bosses[0];
+    const hp = t.hp + state.zone * 8;
+    state.enemies = [{ ...t, curHp: hp, maxHp: hp, _id: 0 }];
+    state.targetIdx = 0;
+    resetBattleCounters();
+    return;
+  }
+
+  const maxTypes = Math.min(3, 1 + Math.floor(state.zone / 2));
+  const typeCount = Math.floor(Math.random() * maxTypes) + 1;
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  const templates = shuffled.slice(0, typeCount);
+
+  state.enemies = [];
+  let id = 0;
+  const MAX = 12;
+
+  templates.forEach(t => {
+    if (state.enemies.length >= MAX) return;
+    const remaining = MAX - state.enemies.length;
+    let count = t.horde
+      ? Math.floor(Math.random() * 2) + (typeCount === 1 ? 5 : typeCount === 2 ? 3 : 2)
+      : Math.floor(Math.random() * 3) + 1;
+    count = Math.min(count, remaining);
+    const hp = t.hp + state.zone * 8;
+    for (let i = 0; i < count; i++) {
+      state.enemies.push({ ...t, curHp: hp, maxHp: hp, _id: id++,
+        stunTurns: 0, poisonTurns: 0, poisonDmg: 0, bleedTurns: 0, bleedDmg: 0 });
+    }
+  });
+
+  state.enemies.sort(() => Math.random() - 0.5);
+  state.enemies.forEach((e, i) => e._id = i);
+  state.targetIdx = 0;
+  resetBattleCounters();
+}
+
+function resetBattleCounters() {
+  state.battleXp = 0; state.battleCaps = 0; state.battleKills = 0;
+  state.defBuff = false; state.adrenBuff = false; state.suppressBuff = false;
+}
+
+function liveEnemies() { return state.enemies.filter(e => e.curHp > 0); }
+
+function getTarget() {
+  const t = state.enemies[state.targetIdx];
+  if (t && t.curHp > 0) return t;
+  const fi = state.enemies.findIndex(e => e.curHp > 0);
+  if (fi >= 0) { state.targetIdx = fi; return state.enemies[fi]; }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+function renderAll() { renderEnemies(); renderParty(); renderItems(); updateStats(); }
+
+function renderEnemies() {
+  const container = document.getElementById('enemy-container');
+  if (!container) return;
+  container.innerHTML = '';
+  state.enemies.forEach((e, i) => {
+    const dead = e.curHp <= 0;
+    const targeted = i === state.targetIdx && !dead;
+    const pct = Math.max(0, e.curHp / e.maxHp * 100);
+    const row = document.createElement('div');
+    row.className = `enemy-row${targeted ? ' targeted' : ''}${dead ? ' dead' : ''}`;
+    if (!dead) row.onclick = () => { state.targetIdx = i; renderEnemies(); };
+
+    const statuses = [];
+    if (e.stunTurns > 0) statuses.push(`<span class="status-badge stunned">STUNNED ×${e.stunTurns}</span>`);
+    if (e.poisonTurns > 0) statuses.push(`<span class="status-badge poisoned">POISONED ×${e.poisonTurns}</span>`);
+    if (e.bleedTurns > 0) statuses.push(`<span class="status-badge bleeding">BLEEDING ×${e.bleedTurns}</span>`);
+
+    row.innerHTML = `
+      <div class="enemy-target-arrow">${targeted ? '▶' : ''}</div>
+      <div class="enemy-emoji">${e.emoji}</div>
+      <div class="enemy-info">
+        <div class="enemy-name-row">
+          <span class="enemy-name">${e.name}</span>
+          <span class="enemy-hp-text">${dead ? 'DEAD' : `${e.curHp}/${e.maxHp}`}</span>
+        </div>
+        <div class="enemy-hp-bar"><div class="enemy-hp-fill" style="width:${pct}%"></div></div>
+        ${statuses.length ? `<div class="enemy-status">${statuses.join('')}</div>` : ''}
+      </div>`;
+    container.appendChild(row);
+  });
+
+  // Name summary below
+  const live = liveEnemies();
+  if (live.length > 0) {
+    const groups = {};
+    live.forEach(e => groups[e.name] = (groups[e.name]||0)+1);
+    const label = Object.entries(groups)
+      .map(([n,c]) => c > 1 ? `${c}× ${n}` : n)
+      .join(' · ');
+    const summary = document.createElement('div');
+    summary.style.cssText = 'font-size:9px;color:var(--amber-dim);letter-spacing:2px;text-align:center;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);';
+    summary.textContent = label.toUpperCase();
+    container.appendChild(summary);
+  }
+}
+
+function renderParty() {
+  const container = document.getElementById('party-container');
+  if (!container || !state.player) return;
+  const p = state.player;
+  const dead = p.hp <= 0;
+  const hpPct = Math.max(0, p.hp / p.maxHp * 100);
+  const enPct = Math.max(0, p.energy / p.maxEn * 100);
+  const tag = dead
+    ? '<span class="party-member-tag fallen">FALLEN</span>'
+    : state.turn === 'player' && !state.busy
+      ? '<span class="party-member-tag acting">ACTING</span>'
+      : '<span class="party-member-tag done">WAITING</span>';
+
+  container.innerHTML = `
+    <div class="party-member-row ${dead?'dead':state.turn==='player'&&!state.busy?'active':''}" >
+      <div class="party-member-header">
+        <div>
+          <div class="party-member-name">${p.icon} ${p.name}</div>
+          <div class="party-member-class">${p.background} · LV.${p.level}</div>
+        </div>
+        ${tag}
+      </div>
+      <div class="member-bars">
+        <div class="member-bar-row">
+          <span class="member-bar-label">HP</span>
+          <div class="member-bar"><div class="member-bar-fill hp" style="width:${hpPct}%"></div></div>
+          <span class="member-bar-val">${p.hp}/${p.maxHp}</span>
+        </div>
+        <div class="member-bar-row">
+          <span class="member-bar-label">EN</span>
+          <div class="member-bar"><div class="member-bar-fill en" style="width:${enPct}%"></div></div>
+          <span class="member-bar-val">${p.energy}/${p.maxEn}</span>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:9px;color:var(--text-dim);letter-spacing:1px;">
+        ◈ ${p.passive}
+      </div>
+    </div>`;
+}
+
+function renderItems() {
+  const el = document.getElementById('items-display');
+  if (!el) return;
+  el.innerHTML = '';
+  const itemDefs = DATA.items?.consumables || {};
+  Object.entries(state.items).forEach(([k, v]) => {
+    if (v <= 0) return;
+    const def = itemDefs[k] || { icon: '?', name: k };
+    const chip = document.createElement('span');
+    chip.className = 'item-chip';
+    chip.textContent = `${def.icon} ×${v}`;
+    chip.title = def.name;
+    el.appendChild(chip);
+  });
+}
+
+function updateStats() {
+  const z = DATA.zones?.find(z => z.id === state.zone);
+  const nameEl = document.getElementById('zone-name');
+  if (nameEl) nameEl.textContent = z?.name?.toUpperCase() || `ZONE ${state.zone}`;
+  ['kills','xp','caps'].forEach(k => {
+    const el = document.getElementById('stat-' + k);
+    if (el) el.textContent = state[k];
+  });
+}
+
+function setButtons(enabled) {
+  ['attack','ability','item','flee'].forEach(id => {
+    const btn = document.getElementById('btn-' + id);
+    if (btn) btn.disabled = !enabled;
+  });
+}
+
+function setTurnBanner(who) {
+  const el = document.getElementById('turn-banner');
+  if (!el) return;
+  el.textContent = who === 'player' ? '◈ YOUR TURN ◈' : '◈ ENEMY TURN ◈';
+  el.className = 'turn-banner ' + (who === 'player' ? 'player-turn' : 'enemy-turn');
+}
+
+function log(msg, cls='') {
+  const el = document.getElementById('message-log');
+  if (!el) return;
+  const div = document.createElement('div');
+  div.className = 'log-line ' + cls;
+  div.innerHTML = msg;
+  el.insertBefore(div, el.firstChild);
+  while (el.children.length > 80) el.removeChild(el.lastChild);
+}
+
+function flashParty() {
+  const el = document.getElementById('party-container');
+  if (!el) return;
+  el.classList.add('flash-red');
+  setTimeout(() => el.classList.remove('flash-red'), 350);
+}
+
+function flashEnemies() {
+  const el = document.getElementById('enemy-container');
+  if (!el) return;
+  el.classList.add('shake');
+  setTimeout(() => el.classList.remove('shake'), 350);
+}
+
+// ═══════════════════════════════════════════════════
+//  PLAYER ACTIONS
+// ═══════════════════════════════════════════════════
+function playerAction(action) {
+  if (state.busy || state.turn !== 'player') return;
+  const p = state.player;
+  if (!p || p.hp <= 0) return;
+  state.busy = true;
+  setButtons(false);
+  if (action === 'attack') doAttack();
+  else if (action === 'flee') doFlee();
+}
+
+function doAttack() {
+  const target = getTarget();
+  if (!target) { endPlayerTurn(); return; }
+
+  const p = state.player;
+  let dmg = Math.floor(Math.random() * 8 + p.atk) - Math.floor(target.armor / 2);
+  dmg = Math.max(1, dmg);
+  let crit = false;
+  if (Math.random() < p.crit) {
+    const critMult = p.passiveId === 'raider_reformed' ? 2.0 : 1.75;
+    dmg = Math.floor(dmg * critMult);
+    crit = true;
+  }
+  if (state.adrenBuff) { dmg = Math.floor(dmg * 1.3); }
+
+  target.curHp = Math.max(0, target.curHp - dmg);
+  flashEnemies();
+  log(`${p.icon} ${p.name} attacks ${target.name} for <b>${dmg}</b> damage!${crit ? ' ★ CRITICAL!' : ''}`, 'attack');
+  renderEnemies();
+  setTimeout(() => handleEnemyHit(target), 500);
+}
+
+function doFlee() {
+  if (Math.random() < 0.4) {
+    log('The squad retreats into the ruins!', 'system');
+    setTimeout(() => { spawnEnemies(); state.busy = false; renderAll(); announceEnemies(); }, 800);
+  } else {
+    log('No escape — pinned down!', 'warn');
+    setTimeout(() => endPlayerTurn(), 500);
+  }
+}
+
+function handleEnemyHit(target, skipAdvance = false) {
+  if (target.curHp <= 0 && !target._killCounted) {
+    target._killCounted = true;
+    const caps = target.caps + Math.floor(Math.random() * 8);
+    const xpGain = target.xp;
+    // Scavenger passive: +20% drop chance
+    const dropChance = state.player.passiveId === 'scavenger' ? 0.20 : 0.12;
+    state.kills++; state.battleKills++;
+    state.xp += xpGain; state.battleXp += xpGain;
+    state.caps += caps; state.battleCaps += caps;
+    log(`${target.emoji} ${target.name} eliminated! (+${xpGain} XP, +${caps} caps)`, 'loot');
+    updateStats();
+    checkLevelUp();
+    if (Math.random() < dropChance) {
+      const drops = target.loot || [];
+      const roll = Math.random();
+      if (roll < 0.55) { state.items.stim = (state.items.stim||0)+1; log('Scavenged a Stim Pack!', 'loot'); }
+      else if (roll < 0.80) { state.items.power_cell = (state.items.power_cell||0)+1; log('Found a Power Cell!', 'loot'); }
+      else if (roll < 0.92) { state.items.rad_away = (state.items.rad_away||0)+1; log('Found Rad-Away!', 'loot'); }
+      else { state.items.revival_shot = (state.items.revival_shot||0)+1; log('Found a Revival Shot! ★', 'loot'); }
+      renderItems();
+    }
+  }
+  if (!skipAdvance) {
+    if (liveEnemies().length === 0) { setTimeout(() => showVictory(), 400); return; }
+    const fi = state.enemies.findIndex(e => e.curHp > 0);
+    if (fi >= 0) { state.targetIdx = fi; renderEnemies(); }
+    endPlayerTurn();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  ABILITY SYSTEM
+// ═══════════════════════════════════════════════════
+function openAbilityMenu() {
+  if (state.busy || state.turn !== 'player') return;
+  const p = state.player;
+  if (!p || p.hp <= 0) return;
+
+  const grid = document.getElementById('ability-menu-grid');
+  const abilityDefs = DATA.abilities?.player || {};
+  grid.innerHTML = '';
+  document.getElementById('heal-target-wrap').style.display = 'none';
+
+  p.abilities.forEach(abId => {
+    const ab = abilityDefs[abId];
+    if (!ab) return;
+    const canCast = p.energy >= ab.cost;
+    const btn = document.createElement('button');
+    btn.className = 'ability-menu-btn';
+    btn.disabled = !canCast;
+    btn.innerHTML = `<div class="amenu-icon">${ab.icon}</div><div class="amenu-name">${ab.name}</div><div class="amenu-cost">⚡ ${ab.cost} EN</div><div class="amenu-desc">${ab.description}</div>`;
+    btn.onclick = () => selectAbility(ab);
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('overlay-abilities').classList.add('open');
+}
+
+function closeAbilityMenu() {
+  document.getElementById('overlay-abilities').classList.remove('open');
+  document.getElementById('heal-target-wrap').style.display = 'none';
+}
+
+function selectAbility(ab) {
+  if (ab.type === 'heal') {
+    document.getElementById('heal-target-wrap').style.display = 'block';
+    const list = document.getElementById('heal-target-list');
+    list.innerHTML = '';
+    // Solo game — only one target
+    const p = state.player;
+    const btn = document.createElement('button');
+    btn.className = 'heal-target-btn';
+    btn.disabled = p.hp <= 0 || p.hp >= p.maxHp;
+    btn.textContent = `${p.icon} ${p.name} (${p.hp}/${p.maxHp})`;
+    btn.onclick = () => { closeAbilityMenu(); castAbility(ab, 'self'); };
+    list.appendChild(btn);
+  } else {
+    closeAbilityMenu();
+    castAbility(ab, null);
+  }
+}
+
+function castAbility(ab, targetOverride) {
+  state.busy = true;
+  setButtons(false);
+  const p = state.player;
+  p.energy = Math.max(0, p.energy - ab.cost);
+
+  if (ab.type === 'dmg') {
+    const target = getTarget();
+    if (!target) { endPlayerTurn(); return; }
+    let dmg = Math.floor(Math.random() * (ab.dmg[1] - ab.dmg[0]) + ab.dmg[0]);
+    if (ab.armorPierce) dmg = Math.max(1, dmg);
+    else dmg = Math.max(1, dmg - Math.floor(target.armor / 2));
+    // Tech Genius passive: check INT
+    if (p.passiveId === 'tech_salvager' && ab.cost <= 2) p.energy = Math.max(0, p.energy + 2);
+    target.curHp = Math.max(0, target.curHp - dmg);
+    flashEnemies();
+    log(`${p.icon} ${ab.icon} ${ab.name} hits ${target.name} for <b>${dmg}</b>!`, 'ability');
+    renderEnemies();
+    setTimeout(() => handleEnemyHit(target), 500);
+
+  } else if (ab.type === 'dmg_multi') {
+    const live = liveEnemies();
+    if (!live.length) { endPlayerTurn(); return; }
+    const hitCount = Math.floor(Math.random() * (ab.hits[1]-ab.hits[0]+1)) + ab.hits[0];
+    const targets = Array.from({length: hitCount}, () => live[Math.floor(Math.random()*live.length)]);
+    log(`${p.icon} ${ab.icon} ${ab.name} — ${hitCount} hits!`, 'ability');
+    let delay = 0;
+    targets.forEach((t, i) => {
+      setTimeout(() => {
+        if (t.curHp <= 0) return;
+        let dmg = Math.floor(Math.random() * (ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+        dmg = Math.max(1, dmg - Math.floor(t.armor/2));
+        t.curHp = Math.max(0, t.curHp - dmg);
+        flashEnemies();
+        log(`  ↳ ${t.name}: <b>${dmg}</b>`, 'ability');
+        renderEnemies();
+        if (i === targets.length - 1) {
+          setTimeout(() => {
+            [...new Set(targets)].forEach(tgt => { if (tgt.curHp <= 0) handleEnemyHit(tgt, true); });
+            if (liveEnemies().length === 0) { setTimeout(() => showVictory(), 400); return; }
+            const fi = state.enemies.findIndex(e => e.curHp > 0);
+            if (fi >= 0) { state.targetIdx = fi; renderEnemies(); }
+            endPlayerTurn();
+          }, 300);
+        }
+      }, delay);
+      delay += 250;
+    });
+
+  } else if (ab.type === 'dmg_all') {
+    const live = liveEnemies();
+    if (!live.length) { endPlayerTurn(); return; }
+    log(`${p.icon} ${ab.icon} ${ab.name} — hits ALL enemies!`, 'ability');
+    live.forEach(t => {
+      let dmg = Math.floor(Math.random() * (ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+      dmg = Math.max(1, dmg - Math.floor(t.armor/2));
+      t.curHp = Math.max(0, t.curHp - dmg);
+      log(`  ↳ ${t.name}: <b>${dmg}</b>`, 'ability');
+    });
+    flashEnemies();
+    renderEnemies();
+    setTimeout(() => {
+      live.forEach(t => { if (t.curHp <= 0) handleEnemyHit(t, true); });
+      if (liveEnemies().length === 0) { setTimeout(() => showVictory(), 400); return; }
+      const fi = state.enemies.findIndex(e => e.curHp > 0);
+      if (fi >= 0) { state.targetIdx = fi; renderEnemies(); }
+      endPlayerTurn();
+    }, 500);
+
+  } else if (ab.type === 'dmg_stun') {
+    const target = getTarget();
+    if (!target) { endPlayerTurn(); return; }
+    let dmg = Math.floor(Math.random() * (ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+    dmg = Math.max(1, dmg - Math.floor(target.armor/2));
+    target.curHp = Math.max(0, target.curHp - dmg);
+    target.stunTurns = ab.stunTurns;
+    const mpDrain = Math.round(target.energy * (ab.mpDrain[0] + Math.random()*(ab.mpDrain[1]-ab.mpDrain[0])));
+    target.energy = Math.max(0, (target.energy||0) - mpDrain);
+    flashEnemies();
+    log(`${p.icon} ${ab.icon} ${ab.name} — ${target.name} stunned for ${ab.stunTurns} turns! <b>${dmg}</b> dmg`, 'ability');
+    renderEnemies(); renderParty();
+    setTimeout(() => handleEnemyHit(target), 500);
+
+  } else if (ab.type === 'dmg_poison') {
+    const target = getTarget();
+    if (!target) { endPlayerTurn(); return; }
+    let dmg = Math.floor(Math.random() * (ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+    dmg = Math.max(1, dmg - Math.floor(target.armor/2));
+    const turns = Math.floor(Math.random() * (ab.poisonTurns[1]-ab.poisonTurns[0]+1)) + ab.poisonTurns[0];
+    const poisDmg = Math.max(2, Math.round(target.maxHp * ab.poisonPct));
+    target.curHp = Math.max(0, target.curHp - dmg);
+    target.poisonTurns = turns; target.poisonDmg = poisDmg;
+    flashEnemies();
+    log(`${p.icon} ${ab.icon} ${ab.name} — ${target.name} poisoned ${turns} turns! <b>${dmg}</b> dmg`, 'ability');
+    renderEnemies();
+    setTimeout(() => handleEnemyHit(target), 500);
+
+  } else if (ab.type === 'dmg_self_sacrifice') {
+    const target = getTarget();
+    if (!target) { endPlayerTurn(); return; }
+    const hpCost = Math.round(p.maxHp * ab.selfHpCost);
+    p.hp = Math.max(1, p.hp - hpCost);
+    let dmg = Math.floor(Math.random() * (ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+    dmg = Math.max(1, dmg - Math.floor(target.armor/2));
+    target.curHp = Math.max(0, target.curHp - dmg);
+    flashEnemies(); flashParty();
+    log(`${p.icon} ${ab.icon} ${ab.name} — ${target.name} takes <b>${dmg}</b>! (Self: -${hpCost} HP)`, 'ability');
+    renderEnemies(); renderParty();
+    setTimeout(() => handleEnemyHit(target), 500);
+
+  } else if (ab.type === 'heal') {
+    const heal = Math.floor(Math.random() * (ab.heal[1]-ab.heal[0]) + ab.heal[0]);
+    const bonus = p.passiveId === 'medic' ? 1.25 : 1;
+    const actual = Math.min(p.maxHp - p.hp, Math.round(heal * bonus));
+    p.hp = Math.min(p.maxHp, p.hp + actual);
+    log(`${p.icon} ${ab.icon} ${ab.name} — recovered <b>${actual}</b> HP!`, 'heal');
+    renderParty();
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else if (ab.type === 'heal_party') {
+    const bonus = p.passiveId === 'medic' ? 1.25 : 1;
+    const heal = Math.round(p.maxHp * ab.healPct * bonus);
+    const actual = Math.min(p.maxHp - p.hp, heal);
+    p.hp = Math.min(p.maxHp, p.hp + actual);
+    log(`${p.icon} ${ab.icon} ${ab.name} — recovered <b>${actual}</b> HP!`, 'heal');
+    renderParty();
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else if (ab.type === 'buff_self') {
+    const heal = Math.round(p.maxHp * ab.healPct);
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    state.adrenBuff = true;
+    log(`${p.icon} ${ab.icon} ${ab.name} — +${heal} HP, damage boosted this turn!`, 'ability');
+    renderParty();
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else if (ab.type === 'buff_party') {
+    const gain = ab.energyGain;
+    p.energy = Math.min(p.maxEn, p.energy + gain);
+    log(`${p.icon} ${ab.icon} ${ab.name} — +${gain} Energy!`, 'ability');
+    renderParty();
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else if (ab.type === 'buff_defense') {
+    state.suppressBuff = true;
+    log(`${p.icon} ${ab.icon} ${ab.name} — Incoming damage reduced 40% this turn!`, 'ability');
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else if (ab.type === 'buff_armor') {
+    state.defBuff = true;
+    log(`${p.icon} ${ab.icon} ${ab.name} — Armor greatly increased this turn!`, 'ability');
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else if (ab.type === 'steal') {
+    const target = getTarget();
+    if (!target) { endPlayerTurn(); return; }
+    if (Math.random() < ab.successChance) {
+      const roll = Math.random();
+      if (roll < 0.55) { state.items.stim = (state.items.stim||0)+1; log(`${p.icon} ${ab.icon} Scavenged a Stim Pack from ${target.name}!`, 'loot'); }
+      else if (roll < 0.85) { state.items.power_cell = (state.items.power_cell||0)+1; log(`${p.icon} ${ab.icon} Grabbed a Power Cell from ${target.name}!`, 'loot'); }
+      else { state.items.rad_away = (state.items.rad_away||0)+1; log(`${p.icon} ${ab.icon} Swiped Rad-Away from ${target.name}!`, 'loot'); }
+      renderItems();
+    } else {
+      log(`${p.icon} ${ab.icon} ${target.name} spots the attempt — nothing gained.`, 'system');
+    }
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else if (ab.type === 'sacrifice_heal') {
+    const hpCost = Math.round(p.maxHp * ab.hpCost);
+    p.hp = Math.max(1, p.hp - hpCost);
+    log(`${p.icon} ${ab.icon} ${ab.name} — Sacrificed ${hpCost} HP for the cause.`, 'ability');
+    renderParty();
+    setTimeout(() => endPlayerTurn(), 600);
+
+  } else {
+    endPlayerTurn();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  ITEMS
+// ═══════════════════════════════════════════════════
+function useItem() {
+  if (state.busy || state.turn !== 'player') return;
+  const p = state.player;
+  const itemDefs = DATA.items?.consumables || {};
+  state.busy = true; setButtons(false);
+
+  if (p.hp < p.maxHp && (state.items.stim||0) > 0) {
+    const heal = Math.min(p.maxHp - p.hp, itemDefs.stim?.heal || 35);
+    p.hp += heal; state.items.stim--;
+    log(`Used Stim Pack — recovered <b>${heal}</b> HP.`, 'heal');
+  } else if (p.energy < p.maxEn && (state.items.power_cell||0) > 0) {
+    const en = Math.min(p.maxEn - p.energy, itemDefs.power_cell?.energy || 25);
+    p.energy += en; state.items.power_cell--;
+    log(`Used Power Cell — restored <b>${en}</b> Energy.`, 'heal');
+  } else if (p.hp <= 0 && (state.items.revival_shot||0) > 0) {
+    p.hp = Math.floor(p.maxHp * 0.5); state.items.revival_shot--;
+    log(`Used Revival Shot — back in the fight!`, 'heal');
+  } else if ((state.items.rad_away||0) > 0) {
+    p.poisonTurns = 0; p.bleedTurns = 0; state.items.rad_away--;
+    log(`Used Rad-Away — status effects cleared.`, 'heal');
+  } else {
+    log('Nothing to use right now.', 'system');
+    state.busy = false; setButtons(true);
+    return;
+  }
+
+  renderParty(); renderItems();
+  setTimeout(() => endPlayerTurn(), 500);
+}
+
+// ═══════════════════════════════════════════════════
+//  ENEMY TURN
+// ═══════════════════════════════════════════════════
+function endPlayerTurn() {
+  state.defBuff = false;
+  state.adrenBuff = false;
+  state.turn = 'enemy';
+  setTurnBanner('enemy');
+  state.busy = false;
+  const live = liveEnemies();
+  const groups = {};
+  live.forEach(e => groups[e.name] = (groups[e.name]||0)+1);
+  const desc = Object.keys(groups).length === 1 && live.length > 1
+    ? `${live.length} ${live[0].name}s act`
+    : live.length === 1 ? `${live[0].name} acts`
+    : `${live.length} hostiles act`;
+  log(`— ${desc} —`, 'system');
+  setTimeout(enemyTurn, 700);
+}
+
+function enemyTurn() {
+  const p = state.player;
+  if (!p || p.hp <= 0) { checkDeath(); return; }
+  const live = liveEnemies();
+  if (!live.length) { startPlayerTurn(); return; }
+
+  // Poison/bleed on player
+  if (p.poisonTurns > 0) {
+    p.hp = Math.max(0, p.hp - p.poisonDmg);
+    p.poisonTurns--;
+    log(`☠ ${p.name} takes ${p.poisonDmg} poison damage! (${p.poisonTurns} turns left)`, 'warn');
+    flashParty();
+  }
+  if (p.bleedTurns > 0) {
+    p.hp = Math.max(0, p.hp - p.bleedDmg);
+    p.bleedTurns--;
+    log(`🩸 ${p.name} bleeds for ${p.bleedDmg} damage!`, 'warn');
+    flashParty();
+  }
+  if (p.hp <= 0) { renderParty(); checkDeath(); return; }
+
+  let delay = 0;
+  live.forEach((e, idx) => {
+    setTimeout(() => {
+      if (p.hp <= 0) return;
+
+      // Status ticks
+      if (e.stunTurns > 0) {
+        e.stunTurns--;
+        log(`${e.emoji} ${e.name} is STUNNED — can't act! (${e.stunTurns} left)`, 'warn');
+        renderEnemies();
+        if (idx === live.length - 1) finalizeEnemyTurn();
+        return;
+      }
+      if (e.poisonTurns > 0) {
+        e.curHp = Math.max(1, e.curHp - e.poisonDmg);
+        e.poisonTurns--;
+        log(`☠ ${e.name} writhes in poison! (-${e.poisonDmg} HP, ${e.poisonTurns} left)`, 'warn');
+        renderEnemies();
+        if (e.curHp <= 1) { handleEnemyHit(e, true); }
+      }
+      if (e.bleedTurns > 0) {
+        e.curHp = Math.max(1, e.curHp - e.bleedDmg);
+        e.bleedTurns--;
+        log(`🩸 ${e.name} bleeds for ${e.bleedDmg}!`, 'warn');
+        renderEnemies();
+      }
+
+      // Enemy action
+      const abilDefs = DATA.abilities?.enemy || {};
+      const useAbil = e.abilities?.length > 0 && Math.random() < 0.30;
+
+      if (useAbil) {
+        const abilId = e.abilities[Math.floor(Math.random() * e.abilities.length)];
+        const ab = abilDefs[abilId];
+        if (ab) {
+          if (ab.type === 'dmg_all_enemy') {
+            let dmg = Math.floor(Math.random() * (ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+            if (state.suppressBuff) dmg = Math.floor(dmg * 0.6);
+            if (state.defBuff) dmg = Math.floor(dmg * 0.5);
+            dmg = Math.max(1, dmg - Math.floor(p.armor/2));
+            p.hp = Math.max(0, p.hp - dmg);
+            log(`${e.emoji} ${e.name} uses ${ab.name} for <b>${dmg}</b>!`, 'enemy');
+            flashParty();
+          } else if (ab.type === 'dmg_multi_enemy') {
+            const hits = Math.floor(Math.random()*(ab.hits[1]-ab.hits[0]+1)) + ab.hits[0];
+            log(`${e.emoji} ${e.name} uses ${ab.name} — ${hits} hits!`, 'enemy');
+            for (let h = 0; h < hits; h++) {
+              let dmg = Math.floor(Math.random()*(ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+              if (state.suppressBuff) dmg = Math.floor(dmg*0.6);
+              if (state.defBuff) dmg = Math.floor(dmg*0.5);
+              dmg = Math.max(1, dmg - Math.floor(p.armor/2));
+              p.hp = Math.max(0, p.hp - dmg);
+              log(`  ↳ <b>${dmg}</b>`, 'enemy');
+            }
+            flashParty();
+          } else if (ab.type === 'dmg_poison') {
+            let dmg = Math.floor(Math.random()*(ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+            if (state.suppressBuff) dmg = Math.floor(dmg*0.6);
+            dmg = Math.max(1, dmg - Math.floor(p.armor/2));
+            p.hp = Math.max(0, p.hp - dmg);
+            if (p.passiveId !== 'mutant') { p.poisonTurns = ab.poisonTurns; p.poisonDmg = ab.poisonFlat; }
+            log(`${e.emoji} ${e.name} uses ${ab.name} for <b>${dmg}</b>! ${p.passiveId==='mutant'?'(Immune to poison)':'Poisoned!'}`, 'enemy');
+            flashParty();
+          } else if (ab.type === 'dmg_bleed') {
+            let dmg = Math.floor(Math.random()*(ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+            dmg = Math.max(1, dmg - Math.floor(p.armor/2));
+            p.hp = Math.max(0, p.hp - dmg);
+            p.bleedTurns = ab.bleedTurns; p.bleedDmg = ab.bleedFlat;
+            log(`${e.emoji} ${e.name} uses ${ab.name} for <b>${dmg}</b>! Bleeding!`, 'enemy');
+            flashParty();
+          } else if (ab.type === 'buff_self_armor') {
+            e.armor = (e.armor||0) + ab.armorBonus;
+            log(`${e.emoji} ${e.name} hardens its shell — armor +${ab.armorBonus}!`, 'enemy');
+          } else {
+            let dmg = Math.floor(Math.random()*(ab.dmg[1]-ab.dmg[0]) + ab.dmg[0]);
+            if (state.suppressBuff) dmg = Math.floor(dmg*0.6);
+            if (state.defBuff) dmg = Math.floor(dmg*0.5);
+            dmg = Math.max(1, dmg - Math.floor(p.armor/2));
+            p.hp = Math.max(0, p.hp - dmg);
+            log(`${e.emoji} ${e.name} uses ${ab.name} for <b>${dmg}</b>!`, 'enemy');
+            flashParty();
+          }
+        }
+      } else {
+        // Basic attack
+        let dmg = Math.floor(Math.random() * 6 + e.attack) - Math.floor(p.armor/2);
+        if (state.suppressBuff) dmg = Math.floor(dmg*0.6);
+        if (state.defBuff) dmg = Math.floor(dmg*0.5);
+        dmg = Math.max(1, dmg);
+        p.hp = Math.max(0, p.hp - dmg);
+        log(`${e.emoji} ${e.name} attacks for <b>${dmg}</b>!`, 'enemy');
+        flashParty();
+      }
+
+      renderParty();
+      if (idx === live.length - 1) {
+        setTimeout(() => finalizeEnemyTurn(), 400);
+      }
+    }, delay);
+    delay += 320;
+  });
+}
+
+function finalizeEnemyTurn() {
+  state.suppressBuff = false;
+  checkDeath();
+  if (state.player.hp > 0) startPlayerTurn();
+}
+
+function startPlayerTurn() {
+  state.turn = 'player';
+  state.busy = false;
+  setTurnBanner('player');
+  setButtons(true);
+  renderAll();
+  log(`— Your turn —`, 'system');
+}
+
+// ═══════════════════════════════════════════════════
+//  LEVEL / DEATH / VICTORY
+// ═══════════════════════════════════════════════════
+function checkLevelUp() {
+  const p = state.player;
+  const newLevel = Math.floor(state.xp / 120) + 1;
+  if (newLevel > p.level) {
+    p.level = newLevel;
+    p.maxHp += 6; p.hp = Math.min(p.maxHp, p.hp + 6);
+    p.maxEn += 4; p.energy = Math.min(p.maxEn, p.energy + 4);
+    p.atk += 2; p.armor += 1;
+    log(`★ Level ${p.level}! Max HP +6, Max EN +4, ATK +2, Armor +1`, 'loot');
+    renderParty();
+  }
+}
+
+function checkDeath() {
+  const p = state.player;
+  if (!p || p.hp > 0) return;
+  setTimeout(() => {
+    document.getElementById('death-stats').innerHTML = `
+      <div>Zone reached: <span>${state.zone}</span></div>
+      <div>Enemies eliminated: <span>${state.kills}</span></div>
+      <div>XP earned: <span>${state.xp}</span></div>`;
+    document.getElementById('overlay-death').classList.add('open');
+  }, 400);
+}
+
+function showVictory() {
+  const p = state.player;
+  renderAll();
+  setTimeout(() => {
+    const lines = [
+      "The hostiles are down. Reload and keep moving.",
+      "Area clear. Don't get comfortable.",
+      "They're all dead. So far, so are you.",
+      `${state.kills} kills and counting. The wasteland isn't done with you yet.`,
+    ];
+    document.getElementById('victory-sub').textContent = lines[Math.floor(Math.random()*lines.length)];
+
+    const partyEl = document.getElementById('victory-party');
+    const hpPct = Math.max(0, p.hp/p.maxHp*100);
+    const enPct = Math.max(0, p.energy/p.maxEn*100);
+    partyEl.innerHTML = `<div class="victory-member">
+      <div class="v-name">${p.icon} ${p.name}</div>
+      <div class="v-bar-row">
+        <span class="v-bar-label">HP</span>
+        <div class="v-bar"><div class="v-bar-fill hp" style="width:${hpPct}%"></div></div>
+        <span class="v-bar-val">${p.hp}/${p.maxHp}</span>
+      </div>
+      <div class="v-bar-row">
+        <span class="v-bar-label">EN</span>
+        <div class="v-bar"><div class="v-bar-fill en" style="width:${enPct}%"></div></div>
+        <span class="v-bar-val">${p.energy}/${p.maxEn}</span>
+      </div>
+    </div>`;
+
+    document.getElementById('victory-gains').innerHTML = `
+      <div>⚔ KILLS <span>${state.battleKills}</span></div>
+      <div>★ XP <span>+${state.battleXp}</span></div>
+      <div>◈ CAPS <span>+${state.battleCaps}</span></div>
+      <div>TOTAL XP <span>${state.xp}</span></div>
+      <div>ZONE <span>${state.zone}</span></div>`;
+
+    document.getElementById('overlay-victory').classList.add('open');
+  }, 300);
+}
+
+function nextEncounter() {
+  document.getElementById('overlay-victory').classList.remove('open');
+  if (state.kills % 3 === 0 && state.zone < 5) {
+    state.zone++;
+    const z = DATA.zones?.find(z => z.id === state.zone);
+    log(`◈ Moving into ${z?.name || 'Zone ' + state.zone}...`, 'system');
+    log(z?.ambience || '', 'system');
+  }
+  // Minor recovery between fights
+  const p = state.player;
+  p.hp = Math.min(p.maxHp, p.hp + 8);
+  p.energy = Math.min(p.maxEn, p.energy + 6);
+  p._deathLogged = false;
+
+  const z = DATA.zones?.find(z => z.id === state.zone);
+  const trapW = z?.trapWeight || 0.15;
+  const scavW = z?.scavengeWeight || 0.15;
+  const roll = Math.random();
+
+  if (roll < trapW) {
+    triggerTrap();
+  } else if (roll < trapW + scavW) {
+    triggerScavenge();
+  } else {
+    spawnEnemies();
+    renderAll();
+    announceEnemies();
+    startPlayerTurn();
+  }
+}
+
+function restartGame() {
+  document.getElementById('overlay-death').classList.remove('open');
+  // Reset cc and go back to character creation
+  cc = { step: 0, name: '', background: null, stats: { STR: 3, AGI: 3, INT: 3, END: 3, LCK: 3 }, selectedAbilities: [] };
+  showCharCreate();
+}
+
+// ═══════════════════════════════════════════════════
+//  TRAPS & SCAVENGE EVENTS
+// ═══════════════════════════════════════════════════
+const TRAP_EVENTS = [
+  { icon: '🕳', title: 'PUNJI TRAP', desc: 'A concealed pit lined with sharpened rebar.', type: 'hp', dmgPct: [0.12, 0.22] },
+  { icon: '💣', title: 'TRIPWIRE MINE', desc: 'A pre-war antipersonnel mine triggers underfoot.', type: 'hp', dmgPct: [0.15, 0.28] },
+  { icon: '☢️', title: 'RAD VENT', desc: 'A cracked pipe vents irradiated steam.', type: 'hp', dmgPct: [0.10, 0.18] },
+  { icon: '🔌', title: 'SHOCK WIRE', desc: 'A live wire drops from the ceiling and makes contact.', type: 'en', drainPct: [0.25, 0.45] },
+  { icon: '💜', title: 'EMP EMITTER', desc: 'A military-grade EMP pulse drains your tech systems.', type: 'en', drainPct: [0.30, 0.50] },
+  { icon: '🌡️', title: 'CRYOGENIC BURST', desc: 'A ruptured cryo-canister flash-freezes your extremities.', type: 'mixed', dmgPct: [0.10, 0.16], drainPct: [0.15, 0.25] },
+];
+
+const SCAVENGE_EVENTS = [
+  { icon: '📦', title: 'SUPPLY CACHE', desc: 'Beneath a collapsed wall — a sealed pre-war supply crate.', loot: [{ item: 'stim', count: [1,3] }] },
+  { icon: '🏥', title: 'FIELD MEDIC KIT', desc: 'An abandoned trauma kit, contents mostly intact.', loot: [{ item: 'stim', count: [2,4] }] },
+  { icon: '⚡', title: 'POWER STATION', desc: 'A still-running micro-reactor. Your cells charge up.', loot: [{ item: 'power_cell', count: [2,3] }] },
+  { icon: '🧪', title: 'CHEM LAB REMNANTS', desc: 'A raider chemist's lab, abandoned in a hurry.', loot: [{ item: 'stim', count: [1,2] }, { item: 'rad_away', count: [1,2] }] },
+  { icon: '💰', title: 'RAIDER STASH', desc: 'A tin box stuffed with caps and gear behind a false wall.', caps: [30, 60], loot: [{ item: 'stim', count: [1,2] }] },
+  { icon: '⭐', title: 'RARE FIND', desc: 'A pre-war military case. Whatever's inside has never been opened.', loot: [{ item: 'revival_shot', count: 1 }, { item: 'stim', count: 2 }] },
+];
+
+function triggerTrap() {
+  const trap = TRAP_EVENTS[Math.floor(Math.random() * TRAP_EVENTS.length)];
+  const p = state.player;
+  const zoneMult = 1 + (state.zone - 1) * 0.15;
+  const levelMult = 1 + (p.level - 1) * 0.07;
+  const scale = zoneMult * levelMult;
+  const effects = [];
+
+  if (trap.type === 'hp' || trap.type === 'mixed') {
+    const dmg = Math.max(1, Math.round(p.maxHp * (trap.dmgPct[0] + Math.random() * (trap.dmgPct[1] - trap.dmgPct[0])) * scale));
+    p.hp = Math.max(1, p.hp - dmg);
+    effects.push(`<span style="color:var(--red-bright)">${p.name} takes ${dmg} damage</span>`);
+  }
+  if (trap.type === 'en' || trap.type === 'mixed') {
+    const drain = Math.max(1, Math.round(p.maxEn * (trap.drainPct[0] + Math.random() * (trap.drainPct[1] - trap.drainPct[0])) * scale));
+    p.energy = Math.max(0, p.energy - drain);
+    effects.push(`<span style="color:var(--blue-bright)">${p.name} loses ${drain} Energy</span>`);
+  }
+
+  showEventOverlay(trap, effects, 'trap');
+  renderParty();
+}
+
+function triggerScavenge() {
+  const event = SCAVENGE_EVENTS[Math.floor(Math.random() * SCAVENGE_EVENTS.length)];
+  const effects = [];
+
+  if (event.caps) {
+    const caps = event.caps[0] + Math.floor(Math.random() * (event.caps[1] - event.caps[0] + 1));
+    state.caps += caps; state.xp += 5;
+    effects.push(`<span style="color:var(--amber)">+${caps} Caps</span>`);
+    updateStats();
+  }
+  (event.loot || []).forEach(l => {
+    const count = Array.isArray(l.count) ? l.count[0] + Math.floor(Math.random() * (l.count[1] - l.count[0] + 1)) : l.count;
+    if (count > 0) {
+      state.items[l.item] = (state.items[l.item] || 0) + count;
+      const def = DATA.items?.consumables?.[l.item];
+      effects.push(`<span style="color:var(--green-bright)">Found ${count}× ${def?.name || l.item}</span>`);
+    }
+  });
+  renderItems();
+  showEventOverlay(event, effects, 'scavenge');
+}
+
+function showEventOverlay(event, effects, type) {
+  document.getElementById('event-icon').textContent = event.icon;
+  document.getElementById('event-title').textContent = event.title;
+  document.getElementById('event-title').style.color = type === 'scavenge' ? 'var(--amber)' : 'var(--red-bright)';
+  document.getElementById('event-desc').textContent = event.desc;
+  document.getElementById('event-effects').innerHTML = effects.join('<br>');
+  document.getElementById('overlay-event').classList.add('open');
+}
+
+function dismissEvent() {
+  document.getElementById('overlay-event').classList.remove('open');
+  spawnEnemies();
+  renderAll();
+  announceEnemies();
+  startPlayerTurn();
+}
+
+function announceEnemies() {
+  const live = liveEnemies();
+  const groups = {};
+  live.forEach(e => groups[e.name] = (groups[e.name]||0)+1);
+  const parts = Object.entries(groups).map(([n,c]) => c > 1 ? `${c}× ${n}` : `a ${n}`);
+  const desc = parts.length <= 1 ? parts[0] : parts.slice(0,-1).join(', ') + ' and ' + parts[parts.length-1];
+  log(`${live.length > 1 ? `Group: ` : ''}${desc} spotted.`, 'enemy');
+}
+
+// ═══════════════════════════════════════════════════
+//  CAMP
+// ═══════════════════════════════════════════════════
+function openCamp() {
+  document.getElementById('overlay-victory').classList.remove('open');
+  ['rest','search','research','craft'].forEach(a => {
+    const b = document.getElementById('camp-btn-' + a);
+    if (b) b.disabled = false;
+  });
+  document.getElementById('camp-result').innerHTML = '';
+  document.getElementById('overlay-camp').classList.add('open');
+}
+
+function closeCamp() {
+  document.getElementById('overlay-camp').classList.remove('open');
+  nextEncounter();
+}
+
+function doCamp(action) {
+  const resultEl = document.getElementById('camp-result');
+  const btn = document.getElementById('camp-btn-' + action);
+  if (btn) btn.disabled = true;
+  const p = state.player;
+  const lines = [];
+
+  if (action === 'rest') {
+    const hpGain = Math.round(p.maxHp * (0.40 + Math.random() * 0.20));
+    const enGain = Math.round(p.maxEn * 0.50);
+    p.hp = Math.min(p.maxHp, p.hp + hpGain);
+    p.energy = Math.min(p.maxEn, p.energy + enGain);
+    p.poisonTurns = 0; p.bleedTurns = 0;
+    lines.push(`<b style="color:var(--amber)">The squad bunkers down...</b>`);
+    lines.push(`${p.icon} ${p.name} recovers <span style="color:var(--hp-color)">${hpGain} HP</span> and <span style="color:var(--en-color)">${enGain} Energy</span>`);
+    lines.push(`<span style="color:var(--text-dim)">Status effects cleared.</span>`);
+    renderParty();
+
+  } else if (action === 'search') {
+    const roll = Math.random();
+    lines.push(`<b style="color:var(--amber)">Searching the area...</b>`);
+    if (roll < 0.12) {
+      lines.push('Nothing. Someone got here first.');
+    } else if (roll < 0.50) {
+      const c = Math.floor(Math.random()*2)+1;
+      state.items.stim = (state.items.stim||0)+c;
+      lines.push(`Found <span style="color:var(--hp-color)">${c}× Stim Pack${c>1?'s':''}.</span>`);
+    } else if (roll < 0.75) {
+      state.items.stim = (state.items.stim||0)+1;
+      state.items.power_cell = (state.items.power_cell||0)+1;
+      lines.push(`Found <span style="color:var(--hp-color)">1 Stim Pack</span> and <span style="color:var(--en-color)">1 Power Cell.</span>`);
+    } else if (roll < 0.90) {
+      state.items.power_cell = (state.items.power_cell||0)+2;
+      lines.push(`Found <span style="color:var(--en-color)">2 Power Cells.</span>`);
+    } else {
+      state.items.revival_shot = (state.items.revival_shot||0)+1;
+      const caps = 20 + Math.floor(Math.random()*30);
+      state.caps += caps;
+      lines.push(`<b style="color:var(--amber)">Jackpot —</b> Revival Shot and <span style="color:var(--amber)">${caps} caps.</span>`);
+    }
+    renderItems(); updateStats();
+
+  } else if (action === 'research') {
+    const xpGain = 30 + state.zone * 12 + Math.floor(Math.random() * 20);
+    state.xp += xpGain;
+    const roll = Math.random();
+    lines.push(`<b style="color:var(--amber)">Reviewing intel by firelight...</b>`);
+    lines.push(`Gained <span style="color:var(--amber)">${xpGain} XP.</span>`);
+    if (roll < 0.35) {
+      const enGain = Math.round(p.maxEn * 0.25);
+      p.energy = Math.min(p.maxEn, p.energy + enGain);
+      lines.push(`<span style="color:var(--en-color)">Systems recharged — +${enGain} Energy.</span>`);
+    } else {
+      lines.push(`<span style="color:var(--text-dim)">Nothing actionable. But knowledge is power.</span>`);
+    }
+    checkLevelUp(); updateStats(); renderParty();
+
+  } else if (action === 'craft') {
+    lines.push(`<b style="color:var(--amber)">Setting up the chem station...</b>`);
+    const typeRoll = Math.random();
+    let brewType, brewCost, brewName, brewColor;
+    if (typeRoll < 0.30)      { brewType='stim';         brewCost=25;  brewName='Stim Pack';    brewColor='var(--hp-color)'; }
+    else if (typeRoll < 0.85) { brewType='power_cell';   brewCost=40;  brewName='Power Cell';   brewColor='var(--en-color)'; }
+    else                      { brewType='revival_shot'; brewCost=100; brewName='Revival Shot'; brewColor='var(--amber)'; }
+
+    const count = Math.floor(Math.random() * 6);
+    const totalCost = count * brewCost;
+
+    if (count === 0) {
+      lines.push('The compounds yield nothing usable this time.');
+    } else if (state.caps < totalCost) {
+      lines.push(`<b style="color:var(--red-bright)">💥 REACTION FAILURE!</b>`);
+      lines.push(`Needed <span style="color:var(--amber)">${totalCost} caps</span> for ${count}× ${brewName} — only had ${state.caps}.`);
+      const dmg = Math.max(1, Math.round(p.maxHp * (0.08 + Math.random() * 0.14)));
+      const enDrain = Math.max(1, Math.round(p.maxEn * (0.10 + Math.random() * 0.15)));
+      p.hp = Math.max(1, p.hp - dmg);
+      p.energy = Math.max(0, p.energy - enDrain);
+      lines.push(`${p.icon} Takes <span style="color:var(--red-bright)">${dmg} damage</span> and loses <span style="color:var(--en-color)">${enDrain} Energy.</span>`);
+      if (btn) btn.disabled = false;
+    } else {
+      state.caps -= totalCost;
+      state.items[brewType] = (state.items[brewType]||0) + count;
+      lines.push(`Synthesized <span style="color:${brewColor}">${count}× ${brewName}</span> for <span style="color:var(--amber-dim)">-${totalCost} caps.</span>`);
+    }
+    renderParty(); renderItems(); updateStats();
+  }
+
+  resultEl.innerHTML = lines.join('<br>');
+}
+
+// ═══════════════════════════════════════════════════
+//  SCREEN MANAGEMENT + BOOT
+// ═══════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+window.onload = () => loadData();
+</script>
+</body>
+</html>
